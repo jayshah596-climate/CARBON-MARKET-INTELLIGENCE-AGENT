@@ -6,8 +6,11 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load .env file if present
+# Load .env file if present (ignored on Vercel where env vars are injected directly)
 load_dotenv()
+
+# Vercel automatically sets VERCEL=1 in both build and runtime environments
+_ON_VERCEL: bool = os.getenv("VERCEL") == "1"
 
 
 class Settings:
@@ -24,8 +27,8 @@ class Settings:
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
 
-    # Output directory for generated Excel / Word files
-    OUTPUT_DIR: Path = Path(os.getenv("OUTPUT_DIR", "./outputs"))
+    # Output directory: /tmp on Vercel (only writable location), ./outputs locally
+    OUTPUT_DIR: Path = Path("/tmp") if _ON_VERCEL else Path(os.getenv("OUTPUT_DIR", "./outputs"))
 
     def validate(self) -> None:
         """Raise if required settings are missing."""

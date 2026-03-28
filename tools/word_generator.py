@@ -6,6 +6,7 @@ Produces a professional, consulting-grade .docx file using python-docx.
 
 from __future__ import annotations
 import logging
+from io import BytesIO
 from pathlib import Path
 from datetime import datetime
 
@@ -130,6 +131,41 @@ class WordGenerator:
         doc.save(str(output_path))
         logger.info("Word document saved: %s", output_path)
         return str(output_path.resolve())
+
+    def generate_bytes(self, report: CarbonIntelligenceReport) -> BytesIO:
+        """Build the Word document and return it as a BytesIO buffer (for streaming)."""
+        doc = Document()
+        self._configure_page(doc)
+        self._add_cover_page(doc, report)
+        doc.add_page_break()
+        self._heading(doc, "Table of Contents", level=1)
+        toc_items = [
+            "1. Executive Summary",
+            "2. Market Overview",
+            "3. Pricing Analysis",
+            "4. Carbon Offsets Analysis",
+            "5. Policy & Regulatory Environment",
+            "6. Risk Analysis",
+            "7. Opportunities & Strategy",
+            "8. Forecast & Outlook",
+            "9. Conclusion & Strategic Recommendations",
+        ]
+        for item in toc_items:
+            doc.add_paragraph(item)
+        doc.add_page_break()
+        self._add_executive_summary(doc, report)
+        self._add_market_overview(doc, report)
+        self._add_pricing_analysis(doc, report)
+        self._add_offsets_analysis(doc, report)
+        self._add_policy_section(doc, report)
+        self._add_risk_section(doc, report)
+        self._add_opportunity_section(doc, report)
+        self._add_forecast_section(doc, report)
+        self._add_conclusion(doc, report)
+        buffer = BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+        return buffer
 
     # ------------------------------------------------------------------
     # Page configuration

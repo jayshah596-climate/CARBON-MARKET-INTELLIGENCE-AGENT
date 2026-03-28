@@ -18,7 +18,7 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from config import settings
@@ -65,6 +65,11 @@ class AnalyzeResponse(BaseModel):
     analysis_id: str
     report: dict[str, Any]
     generated_at: str
+
+
+class ReportRequest(BaseModel):
+    report: dict[str, Any]
+    """Full report JSON from a prior /analyze response."""
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +137,13 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     analysis_id = str(uuid.uuid4())
     _analysis_store[analysis_id] = report
 
+    # Best-effort persist to /tmp for cross-invocation access on Vercel
+    try:
+        tmp_path = Path(f"/tmp/analysis_{analysis_id}.json")
+        tmp_path.write_text(report.model_dump_json(), encoding="utf-8")
+    except Exception:
+        pass
+
     return AnalyzeResponse(
         analysis_id=analysis_id,
         report=report.model_dump(),
@@ -139,69 +151,63 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     )
 
 
-@app.get("/report/excel")
-def download_excel(analysis_id: str) -> FileResponse:
+@app.post("/report/excel")
+def download_excel(request: ReportRequest) -> StreamingResponse:
     """
-    Generate and download a colour-coded Excel dashboard for a prior analysis.
+    Generate and stream a colour-coded Excel dashboard.
 
-    Pass `?analysis_id=<id>` from the /analyze response.
+    Pass the full `report` dict from a prior /analyze response in the body.
     """
-    report = _get_report(analysis_id)
-    output_path = settings.OUTPUT_DIR / f"carbon_report_{analysis_id[:8]}.xlsx"
-    generator = ExcelGenerator()
     try:
-        generator.generate(report, output_path)
+        report = CarbonIntelligenceReport.model_validate(request.report)
+        buffer = ExcelGenerator().generate_bytes(report)
     except Exception as exc:
         logger.exception("Excel generation failed")
         raise HTTPException(status_code=500, detail=f"Excel generation failed: {exc}")
 
-    return FileResponse(
-        path=str(output_path),
-        filename=f"Carbon_Market_Intelligence_{analysis_id[:8]}.xlsx",
+    return StreamingResponse(
+        content=buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="Carbon_Report.xlsx"'},
     )
 
 
-@app.get("/report/word")
-def download_word(analysis_id: str) -> FileResponse:
+@app.post("/report/word")
+def download_word(request: ReportRequest) -> StreamingResponse:
     """
-    Generate and download a professional Word report for a prior analysis.
+    Generate and stream a professional Word report.
 
-    Pass `?analysis_id=<id>` from the /analyze response.
+    Pass the full `report` dict from a prior /analyze response in the body.
     """
-    report = _get_report(analysis_id)
-    output_path = settings.OUTPUT_DIR / f"carbon_report_{analysis_id[:8]}.docx"
-    generator = WordGenerator()
     try:
-        generator.generate(report, output_path)
+        report = CarbonIntelligenceReport.model_validate(request.report)
+        buffer = WordGenerator().generate_bytes(report)
     except Exception as exc:
         logger.exception("Word generation failed")
         raise HTTPException(status_code=500, detail=f"Word generation failed: {exc}")
 
-    return FileResponse(
-        path=str(output_path),
-        filename=f"Carbon_Market_Intelligence_{analysis_id[:8]}.docx",
+    return StreamingResponse(
+        content=buffer,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": 'attachment; filename="Carbon_Report.docx"'},
     )
 
 
 @app.get("/report/json")
 def get_json_report(analysis_id: str) -> dict[str, Any]:
     """Return the raw JSON report for a prior analysis."""
-    report = _get_report(analysis_id)
+    report = _analysis_store.get(analysis_id)
+    if not report:
+        # Fall back to /tmp (best-effort, same Vercel instance)
+        tmp_path = Path(f"/tmp/analysis_{analysis_id}.json")
+        if tmp_path.exists():
+            import json as _json
+            report = CarbonIntelligenceReport.model_validate(_json.loads(tmp_path.read_text()))
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Analysis '{analysis_id}' not found. Run POST /analyze first.",
+            )
     return report.model_dump()
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _get_report(analysis_id: str) -> CarbonIntelligenceReport:
-    """Retrieve a stored report or raise 404."""
-    report = _analysis_store.get(analysis_id)
-    if not report:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Analysis '{analysis_id}' not found. Run POST /analyze first.",
-        )
-    return report

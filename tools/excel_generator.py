@@ -12,6 +12,7 @@ Produces a colour-coded .xlsx workbook with multiple sheets:
 
 from __future__ import annotations
 import logging
+from io import BytesIO
 from pathlib import Path
 from datetime import datetime
 from typing import Any
@@ -120,6 +121,21 @@ class ExcelGenerator:
         wb.save(str(output_path))
         logger.info("Excel workbook saved: %s", output_path)
         return str(output_path.resolve())
+
+    def generate_bytes(self, report: CarbonIntelligenceReport) -> BytesIO:
+        """Build the workbook and return it as a BytesIO buffer (for streaming)."""
+        wb = Workbook()
+        wb.remove(wb.active)  # type: ignore[arg-type]
+        self._add_dashboard_sheet(wb, report)
+        self._add_compliance_sheet(wb, report)
+        self._add_vcm_sheet(wb, report)
+        self._add_offsets_sheet(wb, report)
+        self._add_risk_sheet(wb, report)
+        self._add_opportunities_sheet(wb, report)
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        return buffer
 
     # ------------------------------------------------------------------
     # Sheet: Carbon Dashboard
