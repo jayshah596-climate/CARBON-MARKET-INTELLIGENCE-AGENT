@@ -346,7 +346,7 @@ def serve(host: str, port: int, reload: bool) -> None:
     console.print()
 
     uvicorn.run(
-        "api:app",
+        "carbon_api:app",
         host=host,
         port=port,
         reload=reload,
