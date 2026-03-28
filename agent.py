@@ -107,7 +107,7 @@ POLICY CONTEXT:
 
 MARKET SENTIMENT: Moderately bullish across compliance markets. EU ETS leading
 global price discovery. VCM quality standards improving post-Integrity Council reforms.
-""
+"""
 
 
 class CarbonMarketAgent:
