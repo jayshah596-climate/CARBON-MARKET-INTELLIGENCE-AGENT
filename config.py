@@ -18,7 +18,7 @@ class Settings:
 
     # Anthropic
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    MODEL_NAME: str = os.getenv("MODEL_NAME", "claude-opus-4-6")
+    MODEL_NAME: str = os.getenv("MODEL_NAME", "claude-sonnet-4-6")
 
     # Tavily web search (optional)
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")

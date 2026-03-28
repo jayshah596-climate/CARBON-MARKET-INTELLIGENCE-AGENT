@@ -21,7 +21,7 @@ from tools.web_search import WEB_SEARCH_TOOL_DEFINITION, search_web
 logger = logging.getLogger(__name__)
 
 # Maximum tool-use iterations before we force a final response
-MAX_TOOL_ITERATIONS = 3
+MAX_TOOL_ITERATIONS = 1
 
 
 class CarbonMarketAgent:
@@ -96,7 +96,6 @@ class CarbonMarketAgent:
             response = self._client.messages.create(
                 model=self._model,
                 max_tokens=16000,
-                thinking={"type": "enabled", "budget_tokens": 2000},
                 system=SYSTEM_PROMPT,
                 tools=tools,
                 messages=messages,
