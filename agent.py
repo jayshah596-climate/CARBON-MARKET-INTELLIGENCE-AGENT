@@ -95,7 +95,7 @@ class CarbonMarketAgent:
 
             response = self._client.messages.create(
                 model=self._model,
-                max_tokens=8000,
+                max_tokens=16000,
                 thinking={"type": "enabled", "budget_tokens": 2000},
                 system=SYSTEM_PROMPT,
                 tools=tools,
@@ -152,7 +152,7 @@ class CarbonMarketAgent:
         )
         final_response = self._client.messages.create(
             model=self._model,
-            max_tokens=8000,
+            max_tokens=16000,
             system=SYSTEM_PROMPT,
             messages=messages,
         )
