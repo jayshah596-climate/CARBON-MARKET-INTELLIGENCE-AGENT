@@ -76,6 +76,25 @@ class ReportRequest(BaseModel):
 # Routes
 # ---------------------------------------------------------------------------
 
+@app.get("/")
+def root() -> dict:
+    """API root — returns service info and available endpoints."""
+    return {
+        "service": "Carbon Market Intelligence & ESG Analytics Agent",
+        "version": "1.0.0",
+        "status": "running",
+        "docs": "/docs",
+        "endpoints": {
+            "health": "GET /health",
+            "markets": "GET /markets",
+            "analyze": "POST /analyze",
+            "excel_report": "POST /report/excel",
+            "word_report": "POST /report/word",
+            "json_report": "GET /report/json?analysis_id=<id>",
+        },
+    }
+
+
 @app.get("/health")
 def health_check() -> dict[str, str]:
     """Health check endpoint."""
